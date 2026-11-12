@@ -4,6 +4,7 @@
 // não ajudaria a ler.
 #![allow(clippy::type_complexity)]
 
+mod catalog;
 mod config;
 mod containers;
 mod css;
@@ -24,6 +25,7 @@ mod numfmt;
 mod objects;
 mod package;
 mod preview;
+mod registry;
 mod report;
 mod serve;
 mod skill;
@@ -60,8 +62,15 @@ uso:
                                                    a skill para agentes (SKILL.md, references/, mcp/) com este
                                                    binário em bin/; com --ds <caminho>, o DS vai junto em ds/ e a
                                                    pasta skill/ dele (SKILL.md, references/*.md) entra na skill
+  pptsx-rs catalog [--ds <caminho|pacote>]... [--registry <arquivo>] [--out dist/catalog] [--size 16x9,4x3]
+                 [--json | --prompt]
+                                                   o catálogo visual dos design systems registrados: index.html
+                                                   (galeria com cada caso de cada componente), catalog.json (o
+                                                   contrato), prompt.md e .pptx por DS; --json/--prompt só imprimem
+  pptsx-rs registry list|add <ds> [--id <id>]|remove <id> [--registry <arquivo>]
+                                                   o pptsx.registry.json: os DS que catalog e mcp enxergam sem --ds
   pptsx-rs mcp [--ds <caminho|pacote>]...         servidor MCP por stdio (build, diagnose,
-                                                   preview, lint, guide, schema)
+                                                   preview, lint, guide, schema, catalog)
 
 @pptsx/ds-kit (tokens, tema, variantes, slots, regras, createDs) vem dentro do binário: um DS que o importa
 compila sem node_modules.
@@ -236,6 +245,12 @@ fn main() -> ExitCode {
     }
     if raw.first().map(String::as_str) == Some("types") {
         return init::run_types(&raw[1..]);
+    }
+    if raw.first().map(String::as_str) == Some("catalog") {
+        return catalog::run(&raw[1..]);
+    }
+    if raw.first().map(String::as_str) == Some("registry") {
+        return registry::run(&raw[1..]);
     }
     if raw.first().map(String::as_str) == Some("skill") {
         return skill::run(&raw[1..]);

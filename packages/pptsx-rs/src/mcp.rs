@@ -271,8 +271,11 @@ fn lint_tool(input: &Value, cwd: &Path) -> Result<ToolResult, String> {
 
 struct Ds {
     name: String,
+    version: String,
+    description: Option<String>,
     guide: Option<String>,
     schema: Option<Value>,
+    components: Vec<crate::dsinfo::DsComponent>,
 }
 
 /// O DS de um manifesto. O schema é o do autor quando ele passou um ao `createDs`; senão, o lido dos
@@ -281,7 +284,9 @@ fn manifest_of(interp: &js::Interp, v: &Value) -> Option<Ds> {
     let name = get_str(v, "name")?;
     let guide = get(v, "guide").map(Value::to_js_string);
     let schema = crate::dsprops::schema_of(interp, v);
-    Some(Ds { name, guide, schema })
+    let version = get_str(v, "version").unwrap_or_default();
+    let description = get_str(v, "description");
+    Some(Ds { name, version, description, guide, schema, components: crate::dsinfo::components_of(v) })
 }
 
 fn ds_of_config(path: &Path) -> Vec<Ds> {
@@ -408,6 +413,32 @@ fn guide_tool(input: &Value, ds: &[&Ds]) -> ToolResult {
     let (body, found) = guide_lookup(GUIDE, section.as_deref(), "guia do pptsx");
     let extra = if section.is_none() { sources_line(ds, |d| d.guide.is_some()) } else { String::new() };
     ToolResult { content: vec![text(&format!("{body}{extra}"))], is_error: !found }
+}
+
+// ───────────── catálogo ─────────────
+
+fn catalog_tool(input: &Value, ds: &[&Ds]) -> ToolResult {
+    if ds.is_empty() {
+        return ToolResult { content: vec![text("Nenhum design system registrado. Um DS entra pelo pptsx.config.ts (ds: [...]), pelo pptsx.registry.json (pptsx-rs registry add) ou por pptsx-rs mcp --ds <caminho|pacote>.")], is_error: true };
+    }
+    let source = get_str(input, "source");
+    let chosen: Vec<&&Ds> = match &source {
+        Some(name) => match ds.iter().find(|d| &d.name == name) {
+            Some(d) => vec![d],
+            None => return unknown_source(name, ds),
+        },
+        None => ds.iter().collect(),
+    };
+    let audience = get_str(input, "audience");
+    let kind = get_str(input, "kind");
+    let parts: Vec<String> = chosen
+        .iter()
+        .map(|d| {
+            let index = crate::catalog::IndexDs { name: &d.name, version: &d.version, description: d.description.as_deref(), components: &d.components, schema: d.schema.as_ref() };
+            crate::catalog::index_markdown(&index, audience.as_deref(), kind.as_deref())
+        })
+        .collect();
+    ok(vec![text(&format!("{}\nProps completas: schema(source, primitive=<Componente>). Guia: guide(source).", parts.join("\n---\n\n")))])
 }
 
 // ───────────── schema ─────────────
@@ -559,6 +590,20 @@ fn tools() -> Value {
             input_schema(vec![("source", source()), ("primitive", prop_schema("string", "\"box\", \"text\", \"chart\"… ou o nome de um componente do DS")), ("deck", deck_opt())], &[]),
         ),
         tool(
+            "catalog",
+            "Catálogo dos design systems",
+            "O índice dos componentes dos DS registrados, por camada (template, structure, chart, component, widget): assinatura, para que serve, público, quando usar, o que evitar e o JSX de cada caso do catálogo. Use antes de escrever um deck com um DS: comece pelo template, preencha com estruturas, gráficos e componentes.",
+            input_schema(
+                vec![
+                    ("source", prop_schema("string", "O nome de um DS registrado. Sem ele: todos.")),
+                    ("audience", prop_schema("string", "Só o que serve a este público: \"executive\", \"strategic\", \"tactical\", \"operational\".")),
+                    ("kind", prop_schema("string", "Só esta camada: \"template\", \"structure\", \"chart\", \"component\" ou \"widget\".")),
+                    ("deck", deck_opt()),
+                ],
+                &[],
+            ),
+        ),
+        tool(
             "lint",
             "Lint do deck",
             "As regras da engine (props antigas, lineHeight alto, fr solto, cores fora do tema, estrutura) e as dos design systems da config da pasta do deck (por nó e do deck inteiro). isError = há achado error ou warning. Achados que são do design system e não do deck (`\"origin\": \"ds\"`) só saem com `verbose`.",
@@ -578,6 +623,7 @@ impl Server {
             "lint" => lint_tool(input, &self.cwd),
             "guide" => Ok(guide_tool(input, &ds)),
             "schema" => Ok(schema_tool(input, &ds)),
+            "catalog" => Ok(catalog_tool(input, &ds)),
             other => Err(format!("ferramenta desconhecida: {other}")),
         };
         result.unwrap_or_else(|e| failure(&e))
@@ -598,7 +644,7 @@ impl Server {
                     ("protocolVersion", str_val(&version)),
                     ("capabilities", obj(vec![("tools", obj(vec![]))])),
                     ("serverInfo", obj(vec![("name", str_val("pptsx-rs")), ("version", str_val(env!("CARGO_PKG_VERSION")))])),
-                    ("instructions", str_val("pptsx em Rust: decks TSX → PPTX. Comece por guide() e schema(); itere com diagnose e preview; build grava os arquivos.")),
+                    ("instructions", str_val("pptsx em Rust: decks TSX → PPTX. Comece por guide() e schema() (com um design system, catalog()); itere com diagnose e preview; build grava os arquivos.")),
                 ]))
             }
             "ping" => reply(obj(vec![])),
@@ -617,6 +663,18 @@ impl Server {
 pub fn serve(ds_args: &[String]) -> std::process::ExitCode {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let mut ds: Vec<Ds> = find_config(&cwd).map(|c| ds_of_config(&c)).unwrap_or_default();
+    // Os DS do pptsx.registry.json (desta pasta ou acima) também viram fontes, sem --ds.
+    if let Some(file) = crate::registry::find(&cwd)
+        && let Ok(registry) = crate::registry::load(&file)
+    {
+        for source in crate::registry::sources_of(&file, &registry) {
+            match ds_of_arg(&source.spec, &source.base) {
+                Ok(m) if !ds.iter().any(|d| d.name == m.name) => ds.push(m),
+                Ok(_) => {}
+                Err(e) => eprintln!("{}: {}: {e}", file.display(), source.spec),
+            }
+        }
+    }
     for spec in ds_args {
         match ds_of_arg(spec, &cwd) {
             Ok(m) if !ds.iter().any(|d| d.name == m.name) => ds.push(m),

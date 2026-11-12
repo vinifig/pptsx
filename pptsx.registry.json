@@ -1,0 +1,12 @@
+{
+  "designSystems": [
+    {
+      "id": "ds-base",
+      "ds": "packages/ds-base"
+    },
+    {
+      "id": "aurora",
+      "ds": "examples/third-party-ds/ds.ts"
+    }
+  ]
+}

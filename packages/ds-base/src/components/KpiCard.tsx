@@ -99,10 +99,16 @@ export const KpiCard = defineComponent<KpiCardProps>(
   {
     name: 'KpiCard',
     ds: '@pptsx/ds-base',
+    kind: 'widget',
+    category: 'Indicadores',
+    description: 'Um indicador: rótulo, valor grande e variação com seta e cor pelo sentimento.',
+    audience: ['executive', 'strategic', 'tactical'],
+    whenToUse: ['Um número que é a mensagem do slide.', 'Peça de uma linha de indicadores (KpiRow) ou de uma coluna do TwoColumn.'],
+    avoid: ['Mais de 4 lado a lado: use KpiRow com size="sm" ou uma tabela.'],
     tags: ['kpi'],
     catalog: [
-      { name: 'md', props: { label: 'Receita (R$ mi)', value: '52,4', delta: '+14,2%', trend: 'up' } },
-      { name: 'sm-custo', props: { label: 'Custo por consulta', value: '−22%', delta: 'menor do ano', trend: 'down', sentiment: 'positive', size: 'sm' } },
+      { name: 'md', audience: ['executive'], props: { label: 'Receita (R$ mi)', value: '52,4', delta: '+14,2%', trend: 'up' } },
+      { name: 'sm-custo', audience: ['tactical'], props: { label: 'Custo por consulta', value: '−22%', delta: 'menor do ano', trend: 'down', sentiment: 'positive', size: 'sm' } },
       { name: 'lg-inline', props: { label: 'NPS interno', value: '62', delta: '−4 pts', trend: 'down', size: 'lg', inlineDelta: true } },
     ],
   },

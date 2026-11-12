@@ -34,4 +34,15 @@ function ContentLayoutView({ title, justify = 'start', notes, hidden, children }
   );
 }
 
-export const ContentLayout = defineComponent<ContentLayoutProps>({ name: 'ContentLayout', ds: '@pptsx/ds-base', tags: ['layout'] }, ContentLayoutView);
+export const ContentLayout = defineComponent<ContentLayoutProps>({
+    name: 'ContentLayout',
+    ds: '@pptsx/ds-base',
+    kind: 'template',
+    category: 'Slides',
+    description: 'Slide de conteúdo: título com barra de destaque e corpo flexível para os componentes.',
+    audience: ['executive', 'strategic', 'tactical', 'operational'],
+    whenToUse: ['Todo slide de conteúdo: o corpo recebe estruturas, gráficos e componentes.'],
+    avoid: ['Conteúdo que já tem título próprio grande (uma capa de seção): use CoverLayout.'],
+    tags: ['layout'],
+    catalog: [{ name: 'conteúdo', props: { title: 'O que mudou no trimestre', children: <Text fontSize={20}>O corpo recebe a estrutura do slide: TwoColumn, KpiRow, Gantt ou Bullets.</Text> } }],
+  }, ContentLayoutView);

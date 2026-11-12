@@ -571,7 +571,7 @@ fn copy_bin(root: &Path, source: &Path) -> Result<String, String> {
 }
 
 /// A tabela de props de um componente do DS no `ds.md` (ordem da declaração).
-fn ds_props_table(schema: &Value) -> String {
+pub(crate) fn ds_props_table(schema: &Value) -> String {
     props_table(schema, false)
 }
 

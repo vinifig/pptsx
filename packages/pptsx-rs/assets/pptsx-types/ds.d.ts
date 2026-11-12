@@ -8,6 +8,8 @@ import type { LintRule } from './lint/rule.ts';
 export interface DsManifest {
     readonly name: string;
     readonly version: string;
+    /** Uma ou duas frases: para que o DS serve (o catálogo e o prompt abrem com ela). */
+    readonly description?: string;
     readonly components: readonly ComponentMeta[];
     readonly theme?: Theme;
     readonly rules: readonly LintRule[];

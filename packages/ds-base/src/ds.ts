@@ -1,5 +1,5 @@
 import { createDs } from '@pptsx/ds-kit';
-import { Bullets, KpiCard, KpiRow, TwoColumn } from './components/index.ts';
+import { Bullets, Gantt, KpiCard, KpiRow, TwoColumn } from './components/index.ts';
 import { guideParts } from './guide.ts';
 import { ClosingLayout, ContentLayout, CoverLayout } from './layouts/index.ts';
 import { rules } from './rules.ts';
@@ -10,7 +10,8 @@ import { theme } from './theme.ts';
 export const ds = createDs({
   name: '@pptsx/ds-base',
   version: '0.1.0',
-  components: [Bullets, KpiCard, KpiRow, TwoColumn, CoverLayout, ContentLayout, ClosingLayout],
+  description: 'Design system de exemplo do pptsx: templates de capa, conteúdo e encerramento, indicadores, listas, colunas e um Gantt de roadmap.',
+  components: [Bullets, KpiCard, KpiRow, TwoColumn, Gantt, CoverLayout, ContentLayout, ClosingLayout],
   theme,
   rules,
   guide: guideParts(),
