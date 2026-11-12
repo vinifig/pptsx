@@ -6,6 +6,7 @@ import { theme } from './tokens.ts';
 export const ds = createDs({
   name: 'aurora-ds',
   version: '0.1.0',
+  description: 'DS de terceiro de exemplo (Aurora): capa, indicadores e citação, criado só com o guia do ds-kit.',
   components: [Hero, StatCard, Quote],
   theme,
   rules,

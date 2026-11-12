@@ -28,6 +28,12 @@ export const Hero = defineComponent<HeroProps>(
   {
     name: 'Hero',
     ds: DS,
+    kind: 'component',
+    category: 'Abertura',
+    description: 'Bloco de abertura: título grande e subtítulo sobre o fundo da marca (noite) ou claro (dia).',
+    audience: ['executive', 'strategic'],
+    whenToUse: ['Capa do deck, dentro de um <Slide> sem padding.'],
+    avoid: ['Fora do slide 1 (regra aurora-ds/hero-so-na-capa).'],
     catalog: [
       { name: 'noite', props: { title: 'Aurora 2026', subtitle: 'Resultados do ano' }, fill: true },
       { name: 'dia', props: { title: 'Plano de produto', subtitle: 'Q1 a Q4', tone: 'day' }, fill: true },
@@ -80,6 +86,11 @@ export const StatCard = defineComponent<StatCardProps>(
   {
     name: 'StatCard',
     ds: DS,
+    kind: 'widget',
+    category: 'Indicadores',
+    description: 'Número de destaque com rótulo e variação colorida pelo sinal.',
+    audience: ['executive', 'strategic', 'tactical'],
+    whenToUse: ['De 2 a 4 lado a lado numa Box em row.'],
     catalog: [
       { name: 'neutro', props: { label: 'Receita', value: 'R$ 52,4 mi', delta: '+12%' } },
       { name: 'queda', props: { label: 'Churn', value: '3,1%', delta: '-0,4 pp' } },
@@ -123,6 +134,11 @@ export const Quote = defineComponent<QuoteProps>(
   {
     name: 'Quote',
     ds: DS,
+    kind: 'component',
+    category: 'Texto',
+    description: 'Citação com barra de cor, autor e avatar opcional.',
+    audience: ['executive', 'strategic'],
+    avoid: ['Aspas no text: o componente já as coloca.'],
     catalog: [
       { name: 'marca', props: { text: 'O melhor ano da nossa história.', author: 'Ana Lima, CEO' } },
       { name: 'acento', props: { text: 'Os clientes voltaram porque o produto melhorou.', author: 'Bruno Costa, CPO', tone: 'accent' } },

@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catálogo de design systems</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600&display=swap">
+<style>
+  /* Layout: barra fixa no topo, índice dos DS à esquerda, e cada componente como uma "prancha":
+     os casos sobre uma mesa de luz (os slides de verdade, em SVG), com assinatura e props embaixo. */
+  :root {
+    --bg: #f5f6fa; --panel: #ffffff; --table: #e9ebf3; --ink: #151a2e; --muted: #5a6280; --line: #d9dce8;
+    --accent: #4f5bff; --on-accent: #ffffff; --accent-soft: #e8eaff; --code: #f0f1f7;
+    --ok: #12805c; --warn: #a76200; --err: #c62828;
+    --display: "Sora", "IBM Plex Sans", system-ui, sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --side: 264px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0e1120; --panel: #161a2d; --table: #0a0d19; --ink: #e6e8f2; --muted: #9aa1bd; --line: #2a3050;
+    --accent: #8f98ff; --on-accent: #0e1120; --accent-soft: #232a55; --code: #1d2238; --ok: #4cc79a; --warn: #e0a640; --err: #ff7a7a; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #0e1120; --panel: #161a2d; --table: #0a0d19; --ink: #e6e8f2; --muted: #9aa1bd; --line: #2a3050;
+    --accent: #8f98ff; --on-accent: #0e1120; --accent-soft: #232a55; --code: #1d2238; --ok: #4cc79a; --warn: #e0a640; --err: #ff7a7a; color-scheme: dark; }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+  a { color: var(--accent); }
+  code, pre, .mono { font-family: var(--mono); font-size: 13px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+
+  header.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+    padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  .brand { font: 600 16px/1 var(--display); letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+  .brand small { font: 400 12px var(--mono); color: var(--muted); }
+  .grow { flex: 1; }
+  #search { width: min(320px, 100%); padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; color: var(--muted); padding: 6px 12px; font: 500 13px var(--mono); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  .tier { display: grid; gap: 28px; }
+  .tier > h2 { margin: 0; display: flex; align-items: baseline; gap: 10px; font: 600 12px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .tier > h2 code { text-transform: none; letter-spacing: 0; }
+  .notes { margin: 0; padding-left: 18px; font-size: 13px; color: var(--warn); }
+  .chip.aud { background: transparent; border: 1px solid var(--line); }
+
+  .layout { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); }
+  nav.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 54px); align-self: start; height: calc(100vh - 54px); overflow: auto;
+    padding: 18px 12px 40px max(16px, env(safe-area-inset-left, 0px)); border-right: 1px solid var(--line); }
+  nav.index h2 { font: 600 11px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 18px 8px 6px; }
+  nav.index h2:first-child { margin-top: 0; }
+  nav.index a { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 14px; }
+  nav.index a:hover { background: var(--accent-soft); }
+  nav.index a.ds { font-weight: 600; }
+  nav.index a .n { color: var(--muted); font: 12px var(--mono); }
+  nav.index .cat { font: 500 11px var(--mono); color: var(--muted); padding: 8px 8px 2px 18px; }
+  nav.index a.comp { padding-left: 18px; }
+
+  main { min-width: 0; padding-block: 24px 80px; padding-left: max(16px, 28px); padding-right: max(16px, env(safe-area-inset-right, 0px), 28px); display: flex; flex-direction: column; gap: 48px; }
+  .summary { color: var(--muted); font-size: 14px; }
+
+  section.ds { display: flex; flex-direction: column; gap: 28px; scroll-margin-top: 70px; }
+  .ds-head { display: grid; gap: 14px; padding-bottom: 20px; border-bottom: 2px solid var(--ink); }
+  .ds-head h1 { font: 600 30px/1.15 var(--display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .ds-head h1 .v { font: 400 14px var(--mono); color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+  .ds-head p { margin: 0; max-width: 68ch; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--muted); }
+  .facts b { color: var(--ink); font-weight: 500; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatch { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; border: 1px solid var(--line); border-radius: 999px; font: 12px var(--mono); background: var(--panel); }
+  .swatch i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); display: block; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: 500 12px var(--mono); padding: 2px 8px; border-radius: 4px; background: var(--code); color: var(--muted); }
+  .chip.accent { background: var(--accent-soft); color: var(--accent); }
+  .chip.err { color: var(--err); } .chip.warn { color: var(--warn); } .chip.ok { color: var(--ok); }
+  details.prompt summary, details.guide summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  .error-box { border: 1px solid var(--err); color: var(--err); background: var(--panel); padding: 12px 14px; border-radius: 6px; white-space: pre-wrap; font: 13px var(--mono); }
+
+  article.comp { display: grid; gap: 18px; scroll-margin-top: 70px; }
+  .comp-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+  .comp-head h3 { font: 600 21px/1.2 var(--display); margin: 0; letter-spacing: -0.01em; }
+  .comp-desc { margin: 0; max-width: 70ch; }
+  .advice { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; }
+  .advice h4 { margin: 0 0 4px; font: 600 11px var(--body); letter-spacing: 0.08em; text-transform: uppercase; }
+  .advice .use h4 { color: var(--ok); } .advice .avoid h4 { color: var(--err); }
+  .advice ul { margin: 0; padding-left: 18px; font-size: 14px; }
+
+  .lighttable { background: var(--table); border-radius: 8px; padding: 18px; display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+  .case { display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .slide { position: relative; width: 100%; max-width: 100%; background: #fff; box-shadow: 0 1px 2px rgba(10, 13, 30, .18), 0 6px 18px rgba(10, 13, 30, .10); line-height: 0; }
+  .slide svg { width: 100%; height: auto; display: block; }
+  .slide .more { position: absolute; right: 8px; bottom: 8px; line-height: 1; font: 500 11px var(--mono); background: rgba(21, 26, 46, .82); color: #fff; padding: 3px 6px; border-radius: 4px; }
+  .case-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+  .case-meta .name { font: 500 13px var(--mono); }
+  .case-desc { font-size: 13px; color: var(--muted); margin: 0; }
+  .empty { background: var(--table); border-radius: 8px; padding: 18px; color: var(--muted); font-size: 14px; }
+  .diags { margin: 0; padding-left: 16px; font-size: 12px; color: var(--muted); }
+  .diags li.error { color: var(--err); } .diags li.warning { color: var(--warn); }
+
+  .codeline { display: flex; align-items: flex-start; gap: 8px; background: var(--code); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .codeline code { flex: 1; min-width: 0; overflow-x: auto; white-space: pre; padding-block: 2px; }
+  button.copy { flex: none; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 5px; padding: 2px 8px; font: 12px var(--body); cursor: pointer; }
+  button.copy:hover { border-color: var(--accent); color: var(--accent); }
+
+  .props { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  .props table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .props th, .props td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .props tr:last-child td { border-bottom: 0; }
+  .props th { font: 600 11px var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .props td:first-child { white-space: nowrap; }
+  .req { color: var(--accent); font-weight: 600; }
+
+  .md { font-size: 14px; max-width: 76ch; }
+  .md h1, .md h2, .md h3, .md h4 { font-family: var(--display); font-weight: 600; margin: 1.1em 0 .4em; line-height: 1.25; }
+  .md h1 { font-size: 20px; } .md h2 { font-size: 17px; } .md h3, .md h4 { font-size: 15px; }
+  .md pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; line-height: 1.45; }
+  .md :not(pre) > code { background: var(--code); padding: 1px 4px; border-radius: 3px; }
+  .md table { border-collapse: collapse; font-size: 13px; display: block; overflow-x: auto; }
+  .md th, .md td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; }
+  .prompt-actions { display: flex; gap: 8px; margin: 10px 0; }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    header.bar { position: static; }
+    .seg { flex-wrap: wrap; max-width: 100%; }
+    nav.index { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-height: 40vh; }
+    main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  }
+  @media (prefers-reduced-motion: no-preference) { nav.index a, button { transition: background-color .12s, color .12s, border-color .12s; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">Catálogo de design systems <small id="generator"></small></div>
+  <span class="grow"></span>
+  <input id="search" type="search" placeholder="Buscar componente, tag ou descrição" aria-label="Buscar componente">
+  <div class="seg" id="audiences" role="group" aria-label="Público"></div>
+  <div class="seg" id="sizes" role="group" aria-label="Tamanho do slide"></div>
+</header>
+<div class="layout">
+  <nav class="index" id="index" aria-label="Design systems e componentes"></nav>
+  <main id="main"></main>
+</div>
+<script id="catalog-data" type="application/json">/*__CATALOG__*/null</script>
+<script>
+(() => {
+  // O `pptsx-rs catalog` troca o marcador acima pelo JSON: { catalog, files, prompts }.
+  const raw = document.getElementById('catalog-data').textContent.trim();
+  const data = JSON.parse(raw.startsWith('/*') ? 'null' : raw) || { catalog: { designSystems: [], sizes: [] }, files: {}, prompts: {} };
+  const catalog = data.catalog;
+  const files = data.files || {};
+  const prompts = data.prompts || {};
+  const sizes = (catalog.sizes || []).map((s) => s.name);
+  const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+  // As camadas do contrato, do slide inteiro à peça menor (dsinfo.rs Tier).
+  const TIERS = [['template', 'Templates de slide'], ['structure', 'Estruturas'], ['chart', 'Gráficos e dados'], ['component', 'Componentes'], ['widget', 'Widgets']];
+  const audiencesOf = (c) => [...new Set([...(c.audience || []), ...(c.cases || []).flatMap((k) => k.audience || [])])];
+  const audiences = [...new Set(catalog.designSystems.flatMap((d) => (d.components || []).flatMap(audiencesOf)))];
+  let audience = '';
+  let size = sizes.includes(store.get('pptsx-catalog-size')) ? store.get('pptsx-catalog-size') : sizes[0];
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const anchor = (ds, comp) => (comp ? `${ds}--${comp}` : ds).replace(/[^A-Za-z0-9-]/g, '-');
+
+  // Markdown mínimo do guia e do prompt: títulos, listas, tabelas, código, ênfase.
+  const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
+  const markdown = (text) => {
+    const lines = String(text || '').split('\n');
+    const out = [];
+    for (let i = 0; i < lines.length; ) {
+      const line = lines[i];
+      if (line.startsWith('```')) {
+        const body = [];
+        for (i++; i < lines.length && !lines[i].startsWith('```'); i++) body.push(lines[i]);
+        i++;
+        out.push(`<pre><code>${esc(body.join('\n'))}</code></pre>`);
+      } else if (/^#{1,4} /.test(line)) {
+        const level = line.match(/^#+/)[0].length;
+        out.push(`<h${level}>${inline(line.slice(level + 1))}</h${level}>`);
+        i++;
+      } else if (line.startsWith('|')) {
+        const rows = [];
+        for (; i < lines.length && lines[i].startsWith('|'); i++) rows.push(lines[i]);
+        const cells = (r) => r.replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+        const body = rows.filter((r, k) => !(k === 1 && /^\|[\s:|-]+\|$/.test(r)));
+        out.push(`<table>${body.map((r, k) => `<tr>${cells(r).map((c) => (k === 0 ? `<th>${inline(c)}</th>` : `<td>${inline(c)}</td>`)).join('')}</tr>`).join('')}</table>`);
+      } else if (/^\s*[-*] /.test(line)) {
+        const items = [];
+        for (; i < lines.length && /^\s*[-*] /.test(lines[i]); i++) items.push(lines[i].replace(/^\s*[-*] /, ''));
+        out.push(`<ul>${items.map((t) => `<li>${inline(t)}</li>`).join('')}</ul>`);
+      } else if (line.trim() === '') {
+        i++;
+      } else {
+        const para = [];
+        for (; i < lines.length && lines[i].trim() !== '' && !/^(#{1,4} |```|\||\s*[-*] )/.test(lines[i]); i++) para.push(lines[i]);
+        out.push(`<p>${inline(para.join(' '))}</p>`);
+      }
+    }
+    return out.join('\n');
+  };
+
+  const copyButton = (text, label = 'Copiar') => `<button type="button" class="copy" data-copy="${esc(text)}">${label}</button>`;
+  const counts = (diags) => ['error', 'warning'].map((sev) => [sev, (diags || []).filter((d) => d.severity === sev && d.size === size).length]);
+
+  const caseHtml = (comp, c) => {
+    const previews = (c.previews && c.previews[size]) || [];
+    const svg = previews.length ? files[previews[0]] : null;
+    const badges = c.error ? '<span class="chip err">não renderiza</span>'
+      : counts(c.diagnostics).filter(([, n]) => n > 0).map(([sev, n]) => `<span class="chip ${sev === 'error' ? 'err' : 'warn'}">${n} ${sev}</span>`).join('') || (previews.length ? '<span class="chip ok">ok</span>' : '');
+    const visual = c.error ? `<div class="error-box">${esc(c.error)}</div>`
+      : svg ? `<div class="slide" role="img" aria-label="${esc(comp.name)}, caso ${esc(c.name)}">${svg}${previews.length > 1 ? `<span class="more">+${previews.length - 1} slide${previews.length > 2 ? 's' : ''} (pagina)</span>` : ''}</div>`
+      : '<div class="empty">Sem prévia neste tamanho (rode <code>pptsx-rs catalog</code> sem --json).</div>';
+    const diags = (c.diagnostics || []).filter((d) => d.size === size && d.severity !== 'info');
+    return `<div class="case" data-audience="${esc((c.audience && c.audience.length ? c.audience : comp.audience || []).join(' '))}">
+      ${visual}
+      <div class="case-meta"><span class="name">${esc(c.name)}${c.fill ? ' · fill' : ''}</span><span class="chips">${(c.audience || []).map((a) => `<span class="chip aud">${esc(a)}</span>`).join('')}${badges}</span></div>
+      ${c.description ? `<p class="case-desc">${inline(c.description)}</p>` : ''}
+      ${diags.length ? `<ul class="diags">${diags.map((d) => `<li class="${esc(d.severity)}"><code>${esc(d.code)}</code> ${esc(d.message)}</li>`).join('')}</ul>` : ''}
+      <div class="codeline"><code>${esc(c.usage)}</code>${copyButton(c.usage)}</div>
+    </div>`;
+  };
+
+  const propsHtml = (schema) => {
+    const props = Object.entries((schema && schema.properties) || {});
+    if (!props.length) return '';
+    const required = new Set((schema && schema.required) || []);
+    const note = (p) => [p.description ? inline(p.description) : '', p.default !== undefined ? `Padrão <code>${esc(p.default)}</code>.` : '', p.examples && p.examples.length ? `Ex.: ${p.examples.slice(0, 3).map((e) => `<code>${esc(typeof e === 'string' ? e : JSON.stringify(e))}</code>`).join(', ')}` : ''].filter(Boolean).join(' ');
+    const extendsLine = schema['x-extends'] && schema['x-extends'].length ? `<p class="summary">Aceita também as props de ${schema['x-extends'].map((e) => `<code>${esc(e)}</code>`).join(', ')}.</p>` : '';
+    return `<div class="props"><table>
+      <thead><tr><th>prop</th><th>tipo</th><th>nota</th></tr></thead>
+      <tbody>${props.map(([name, p]) => `<tr><td><code>${esc(name)}</code>${required.has(name) ? ' <span class="req" title="obrigatória">*</span>' : ''}</td><td><code>${esc(p.type || p['x-tsType'] || '')}</code></td><td>${note(p)}</td></tr>`).join('')}</tbody>
+    </table></div>${extendsLine}`;
+  };
+
+  const componentHtml = (ds, comp) => {
+    const chips = [`<span class="chip accent">${esc(comp.kind || 'component')}</span>`, ...(comp.audience || []).map((a) => `<span class="chip aud">${esc(a)}</span>`), comp.category ? `<span class="chip">${esc(comp.category)}</span>` : '', ...(comp.tags || []).map((t) => `<span class="chip">#${esc(t)}</span>`)].join('');
+    const advice = (comp.whenToUse && comp.whenToUse.length) || (comp.avoid && comp.avoid.length)
+      ? `<div class="advice">${comp.whenToUse && comp.whenToUse.length ? `<div class="use"><h4>Use quando</h4><ul>${comp.whenToUse.map((t) => `<li>${inline(t)}</li>`).join('')}</ul></div>` : ''}${comp.avoid && comp.avoid.length ? `<div class="avoid"><h4>Evite</h4><ul>${comp.avoid.map((t) => `<li>${inline(t)}</li>`).join('')}</ul></div>` : ''}</div>` : '';
+    const cases = comp.cases && comp.cases.length
+      ? `<div class="lighttable">${comp.cases.map((c) => caseHtml(comp, c)).join('')}</div>`
+      : `<div class="empty">${esc(comp.name)} ainda não tem caso de catálogo. Acrescente <code>catalog: [{ name, props }]</code> no <code>defineComponent</code> para ele aparecer aqui.</div>`;
+    return `<article class="comp" id="${anchor(ds.id, comp.name)}" data-audience="${esc(audiencesOf(comp).join(' '))}" data-search="${esc([comp.name, comp.displayName, comp.description, comp.category, comp.kind, ...(comp.tags || []), ...audiencesOf(comp)].join(' ').toLowerCase())}">
+      <div class="comp-head"><h3>${esc(comp.displayName || comp.name)}</h3><span class="chips">${chips}</span></div>
+      ${comp.description ? `<p class="comp-desc">${inline(comp.description)}</p>` : ''}
+      ${advice}
+      <div class="codeline"><code>${esc(comp.signature)}</code>${copyButton(comp.signature)}</div>
+      ${cases}
+      ${propsHtml(comp.schema)}
+      ${comp.guide ? `<details class="guide"><summary>Guia do componente</summary><div class="md">${markdown(comp.guide)}</div></details>` : ''}
+    </article>`;
+  };
+
+  const dsHtml = (ds) => {
+    if (ds.error) return `<section class="ds" id="${anchor(ds.id)}"><div class="ds-head"><h1>${esc(ds.name || ds.id)}</h1><p class="summary"><code>${esc(ds.source)}</code></p></div><div class="error-box">${esc(ds.error)}</div></section>`;
+    const cases = ds.components.reduce((n, c) => n + (c.cases || []).length, 0);
+    const colors = Object.entries((ds.theme && ds.theme.colors) || {});
+    const pptx = ds.pptx && ds.pptx[size] ? `<a href="${esc(ds.pptx[size])}">catalog.${esc(size)}.pptx</a>` : '';
+    const prompt = prompts[ds.id];
+    return `<section class="ds" id="${anchor(ds.id)}">
+      <div class="ds-head">
+        <h1>${esc(ds.name)}<span class="v">${esc(ds.version)}</span></h1>
+        ${ds.description ? `<p>${inline(ds.description)}</p>` : ''}
+        <div class="facts">${TIERS.filter(([k]) => ds.tiers && ds.tiers[k]).map(([k, title]) => `<span><b>${ds.tiers[k]}</b> ${esc(title.toLowerCase())}</span>`).join('') || `<span><b>${ds.components.length}</b> componentes</span>`}<span><b>${cases}</b> casos</span><span>fonte <code>${esc(ds.source)}</code></span>${pptx ? `<span>${pptx}</span>` : ''}${ds.prompt ? `<span><a href="${esc(ds.prompt)}">prompt.md</a></span>` : ''}</div>
+        ${colors.length ? `<div class="swatches">${colors.map(([slot, hex]) => `<span class="swatch"><i style="background:${esc(hex)}"></i>${esc(slot)} ${esc(hex)}</span>`).join('')}</div>` : ''}
+        ${ds.rules && ds.rules.length ? `<div class="chips">${ds.rules.map((r) => `<span class="chip ${r.severity === 'error' ? 'err' : r.severity === 'warning' ? 'warn' : ''}" title="${esc(r.severity)}">${esc(r.id)}</span>`).join('')}</div>` : ''}
+        ${ds.notes && ds.notes.length ? `<ul class="notes">${ds.notes.map((n) => `<li>${inline(n)}</li>`).join('')}</ul>` : ''}
+        ${prompt ? `<details class="prompt"><summary>Prompt para agentes</summary><div class="prompt-actions">${copyButton(prompt, 'Copiar prompt')}</div><div class="md">${markdown(prompt)}</div></details>` : ''}
+      </div>
+      ${TIERS.filter(([k]) => ds.components.some((c) => (c.kind || 'component') === k)).map(([k, title]) => `<div class="tier"><h2>${esc(title)} <code>kind: "${k}"</code></h2>${ds.components.filter((c) => (c.kind || 'component') === k).map((c) => componentHtml(ds, c)).join('')}</div>`).join('')}
+    </section>`;
+  };
+
+  const indexHtml = () => catalog.designSystems.map((ds) => {
+    const groups = new Map();
+    TIERS.forEach(([k, title]) => { const comps = (ds.components || []).filter((c) => (c.kind || 'component') === k); if (comps.length) groups.set(title, comps); });
+    const links = [...groups.entries()].map(([cat, comps]) => `<div class="cat">${esc(cat)}</div>${comps.map((c) => `<a class="comp" data-target="${anchor(ds.id, c.name)}" href="#${anchor(ds.id, c.name)}">${esc(c.displayName || c.name)}<span class="n">${(c.cases || []).length}</span></a>`).join('')}`).join('');
+    return `<h2>${esc(ds.id)}</h2><a class="ds" href="#${anchor(ds.id)}">${esc(ds.name || ds.id)}<span class="n">${esc(ds.version || '')}</span></a>${links}`;
+  }).join('');
+
+  const render = () => {
+    const main = document.getElementById('main');
+    if (!catalog.designSystems.length) {
+      main.innerHTML = '<div class="empty">Nenhum design system registrado. Rode <code>pptsx-rs registry add &lt;caminho do DS&gt;</code> e depois <code>pptsx-rs catalog</code>.</div>';
+      return;
+    }
+    const total = catalog.designSystems.reduce((n, d) => n + (d.components || []).length, 0);
+    main.innerHTML = `<p class="summary">${catalog.designSystems.length} design systems · ${total} componentes · slides em ${esc(size)}</p>` + catalog.designSystems.map(dsHtml).join('');
+    applySearch();
+  };
+
+  const applySearch = () => {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const fits = (el) => audience === '' || el.dataset.audience === '' || el.dataset.audience.split(' ').includes(audience);
+    document.querySelectorAll('article.comp').forEach((el) => { el.hidden = (q !== '' && !el.dataset.search.includes(q)) || !fits(el); });
+    document.querySelectorAll('.case').forEach((el) => { el.hidden = !fits(el); });
+    document.querySelectorAll('.tier').forEach((el) => { el.hidden = ![...el.querySelectorAll('article.comp')].some((a) => !a.hidden); });
+    document.querySelectorAll('nav.index a.comp').forEach((a) => { const el = document.getElementById(a.dataset.target); a.hidden = !!el && el.hidden; });
+  };
+
+  document.getElementById('generator').textContent = catalog.generator || '';
+  document.getElementById('index').innerHTML = indexHtml();
+  document.getElementById('sizes').innerHTML = sizes.map((s) => `<button type="button" data-size="${esc(s)}" aria-pressed="${s === size}">${esc(s)}</button>`).join('');
+  document.getElementById('sizes').hidden = sizes.length < 2;
+  document.getElementById('sizes').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-size]');
+    if (!b) return;
+    size = b.dataset.size;
+    store.set('pptsx-catalog-size', size);
+    document.querySelectorAll('#sizes button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.size === size)));
+    render();
+  });
+  document.getElementById('search').addEventListener('input', applySearch);
+  const audienceBox = document.getElementById('audiences');
+  audienceBox.innerHTML = ['', ...audiences].map((a) => `<button type="button" data-audience="${esc(a)}" aria-pressed="${a === audience}">${esc(a || 'todos')}</button>`).join('');
+  audienceBox.hidden = audiences.length === 0;
+  audienceBox.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-audience]');
+    if (!b) return;
+    audience = b.dataset.audience;
+    audienceBox.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.audience === audience)));
+    applySearch();
+  });
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button.copy');
+    if (!b) return;
+    const text = b.dataset.copy;
+    const done = () => { const old = b.textContent; b.textContent = 'Copiado'; setTimeout(() => { b.textContent = old; }, 1200); };
+    const fallback = () => { const code = b.parentElement.querySelector('code'); if (code) { const r = document.createRange(); r.selectNodeContents(code); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch { fallback(); }
+  });
+  render();
+  const go = () => { const id = location.hash.slice(1); const el = id && document.getElementById(id); if (el) el.scrollIntoView(); };
+  window.addEventListener('hashchange', go);
+  go();
+})();
+</script>
+</body>
+</html>

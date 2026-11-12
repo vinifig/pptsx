@@ -790,11 +790,34 @@ export declare const COMPONENT_META: unique symbol;
  * metadados livres que regras de lint e o catálogo leem (`catalog`, por exemplo). O núcleo não interpreta
  * nada além de `name`/`displayName`.
  */
+/**
+ * A camada de um componente no DS (o contrato do catálogo, docs/ds-catalog.md), da peça menor ao slide:
+ * `widget` (atômico: um indicador, um selo), `component` (bloco de conteúdo: lista, citação),
+ * `chart` (apresenta dados: gráfico, tabela, Gantt), `structure` (organiza outros numa região: colunas,
+ * grade) e `template` (o slide inteiro: devolve o `<Slide>`; recomendado, para o agente começar cada slide).
+ */
+export type ComponentKind = 'widget' | 'component' | 'chart' | 'structure' | 'template';
+/** Para quem o componente (ou uma variação dele) foi pensado. Outros valores valem; estes são os do catálogo. */
+export type Audience = 'executive' | 'strategic' | 'tactical' | 'operational' | (string & {});
 export interface ComponentMeta {
     readonly name: string;
     readonly displayName?: string;
     readonly ds?: string;
     readonly tags?: readonly string[];
+    /** A camada no DS; padrão 'component'. 'template' sai como slide inteiro no catálogo. */
+    readonly kind?: ComponentKind;
+    /** Uma frase: o que o componente é (a 1ª linha dele no catálogo e no prompt). */
+    readonly description?: string;
+    /** Agrupa no catálogo dentro da camada ("Indicadores", "Roadmap"). */
+    readonly category?: string;
+    /** Públicos para os quais serve; cada caso do catálogo pode dizer o seu (variação tática × executiva). */
+    readonly audience?: readonly Audience[];
+    /** Situações em que o agente deve escolher este componente. */
+    readonly whenToUse?: readonly string[];
+    /** O que não fazer com ele (e o que usar no lugar). */
+    readonly avoid?: readonly string[];
+    /** Markdown com o guia do componente (vira uma seção do guia do DS). */
+    readonly guide?: string;
     readonly [key: string]: unknown;
 }
 /** M18: um caso do catálogo de um componente (props de exemplo); `fill` = o componente preenche o corpo. */
@@ -802,6 +825,10 @@ export interface ComponentCatalogCase<P> {
     readonly name: string;
     readonly props: P;
     readonly fill?: boolean;
+    /** Uma linha sobre o que o caso mostra. */
+    readonly description?: string;
+    /** O público desta variação (ex.: `['executive']` num caso resumido). */
+    readonly audience?: readonly Audience[];
 }
 /** M18: o meta de `defineComponent` com `catalog` tipado pelas props do componente. */
 export type ComponentMetaFor<P> = ComponentMeta & {

@@ -8,17 +8,100 @@ use std::rc::Rc;
 
 use crate::js::value::{Obj, Value, to_json};
 
+/// Um caso do catálogo (`meta.catalog[i]`): o nome, as props de exemplo e como ele ocupa o slide.
+pub struct DsCase {
+    pub name: String,
+    /// Uma linha sobre o que o caso mostra (contrato do catálogo; opcional).
+    pub description: Option<String>,
+    /// `fill: true`: o componente preenche o corpo do slide (sem a coluna de tamanho natural).
+    pub fill: bool,
+    /// Para quem a variação foi pensada (`audience`, ex.: `executive`, `tactical`); vazio = o do componente.
+    pub audience: Vec<String>,
+    pub props: Rc<Obj>,
+}
+
+/// As camadas de um DS, da peça menor ao slide inteiro (`meta.kind`, docs/ds-catalog.md). O agente
+/// monta um slide de cima para baixo: escolhe o template, preenche as estruturas com componentes, e os
+/// componentes com widgets.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Tier {
+    /// Peça atômica, sem filhos de outro componente do DS (um selo, um marcador, um número).
+    Widget,
+    /// Um bloco de conteúdo com sentido próprio (cartão de KPI, lista, citação).
+    Component,
+    /// Apresenta dados: gráfico, tabela, Gantt de roadmap, linha do tempo.
+    Chart,
+    /// Organiza outros componentes numa região do slide (colunas, grade, faixa).
+    Structure,
+    /// O slide inteiro (capa, conteúdo, encerramento): devolve o `<Slide>`.
+    Template,
+}
+
+impl Tier {
+    pub const ALL: [Tier; 5] = [Tier::Template, Tier::Structure, Tier::Chart, Tier::Component, Tier::Widget];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Tier::Widget => "widget",
+            Tier::Component => "component",
+            Tier::Chart => "chart",
+            Tier::Structure => "structure",
+            Tier::Template => "template",
+        }
+    }
+
+    /// O título da seção no prompt e no visualizador.
+    pub fn title(self) -> &'static str {
+        match self {
+            Tier::Template => "Templates de slide",
+            Tier::Structure => "Estruturas",
+            Tier::Component => "Componentes",
+            Tier::Chart => "Gráficos e dados",
+            Tier::Widget => "Widgets",
+        }
+    }
+
+    /// `meta.kind`; sem ele, `slide: true` (ou a tag `layout`, do ds-base anterior ao contrato) é template.
+    fn of(meta: &Value) -> Tier {
+        match get_str(meta, "kind").as_deref() {
+            Some("widget") => return Tier::Widget,
+            Some("structure") => return Tier::Structure,
+            Some("template") => return Tier::Template,
+            Some("chart") => return Tier::Chart,
+            Some(_) => return Tier::Component,
+            None => {}
+        }
+        if get(meta, "slide").is_some_and(Value::truthy) { Tier::Template } else { Tier::Component }
+    }
+}
+
 pub struct DsComponent {
     pub name: String,
     pub display_name: Option<String>,
     pub guide: Option<String>,
     /// Props do 1º caso do catálogo (o exemplo do deck inicial e do ds.md).
     pub props: Option<Rc<Obj>>,
+    /// Metadados de prompt e de catálogo (docs/ds-catalog.md): todos opcionais.
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub tags: Vec<String>,
+    pub when_to_use: Vec<String>,
+    pub avoid: Vec<String>,
+    /// Públicos para os quais o componente serve (`executive`, `strategic`, `tactical`, `operational`…).
+    pub audience: Vec<String>,
+    /// A camada do componente no DS (`meta.kind`).
+    pub kind: Tier,
+    /// O componente devolve o `<Slide>` inteiro (todo `template`, ou `slide: true`): o catálogo o põe direto no Deck.
+    pub slide: bool,
+    pub cases: Vec<DsCase>,
 }
 
 pub struct DsInfo {
     pub name: String,
     pub version: String,
+    pub description: Option<String>,
+    /// As cores do tema do arquivo (`theme.colors`), na ordem declarada, em `#RRGGBB`.
+    pub theme_colors: Vec<(String, String)>,
     /// O especificador que o deck e a config importam (o pacote, ou um caminho relativo com extensão).
     pub import_from: String,
     /// `import { ds } from …` (nomeado) ou `import ds from …` (default).
@@ -78,6 +161,11 @@ fn resolved(path: &Path) -> PathBuf {
     std::fs::canonicalize(&existing).unwrap_or(existing).join(rest)
 }
 
+/// Caminho relativo de `from` (pasta) até `to`, com `/`.
+pub fn relative_path(from: &Path, to: &Path) -> String {
+    relative_import(from, to)
+}
+
 fn relative_import(from: &Path, to: &Path) -> String {
     let (from, to) = (resolved(from), resolved(to));
     let f: Vec<_> = from.components().collect();
@@ -123,25 +211,62 @@ fn monorepo_tsconfig(deck_dir: &Path) -> Option<String> {
     }
 }
 
-fn components_of(manifest: &Value) -> Vec<DsComponent> {
+fn strings_of(v: &Value, key: &str) -> Vec<String> {
+    match get(v, key) {
+        Some(Value::Array(list)) => list.borrow().iter().map(Value::to_js_string).filter(|s| !s.is_empty()).collect(),
+        Some(Value::Str(s)) if !s.is_empty() => vec![s.to_string()],
+        _ => Vec::new(),
+    }
+}
+
+fn cases_of(meta: &Value) -> Vec<DsCase> {
+    let Some(Value::Array(cases)) = get(meta, "catalog") else { return Vec::new() };
+    cases
+        .borrow()
+        .iter()
+        .enumerate()
+        .filter_map(|(i, case)| {
+            let Some(Value::Object(props)) = get(case, "props") else { return None };
+            Some(DsCase {
+                name: get_str(case, "name").unwrap_or_else(|| format!("caso {}", i + 1)),
+                description: get_str(case, "description"),
+                fill: get(case, "fill").is_some_and(Value::truthy),
+                audience: strings_of(case, "audience"),
+                props: props.clone(),
+            })
+        })
+        .collect()
+}
+
+/// Os componentes do manifesto (`components`, os metas do `defineComponent`).
+pub fn components_of(manifest: &Value) -> Vec<DsComponent> {
     let Some(Value::Array(list)) = get(manifest, "components") else { return Vec::new() };
     list.borrow()
         .iter()
         .filter_map(|meta| {
             let name = get_str(meta, "name")?;
-            let props = match get(meta, "catalog") {
-                Some(Value::Array(cases)) => cases.borrow().first().and_then(|case| match get(case, "props") {
-                    Some(Value::Object(p)) => Some(p.clone()),
-                    _ => None,
-                }),
-                _ => None,
-            };
-            Some(DsComponent { name, display_name: get_str(meta, "displayName"), guide: get_str(meta, "guide"), props })
+            let cases = cases_of(meta);
+            let kind = Tier::of(meta);
+            Some(DsComponent {
+                name,
+                display_name: get_str(meta, "displayName"),
+                guide: get_str(meta, "guide"),
+                props: cases.first().map(|c| c.props.clone()),
+                description: get_str(meta, "description"),
+                category: get_str(meta, "category"),
+                tags: strings_of(meta, "tags"),
+                when_to_use: strings_of(meta, "whenToUse"),
+                avoid: strings_of(meta, "avoid"),
+                audience: strings_of(meta, "audience"),
+                kind,
+                slide: kind == Tier::Template || get(meta, "slide").is_some_and(Value::truthy),
+                cases,
+            })
         })
         .collect()
 }
 
-fn rules_of(manifest: &Value) -> Vec<(String, String)> {
+pub fn rules_of(manifest: &Value) -> Vec<(String, String)> {
     let Some(Value::Array(list)) = get(manifest, "rules") else { return Vec::new() };
     list.borrow().iter().filter_map(|r| Some((get_str(r, "id")?, get_str(r, "severity").unwrap_or_else(|| "warning".into())))).collect()
 }
@@ -168,6 +293,8 @@ pub fn load(spec: &str, deck_dir: &Path, cwd: &Path) -> Result<DsInfo, String> {
     Ok(DsInfo {
         name: get_str(&manifest, "name").unwrap_or_else(|| spec.to_string()),
         version: get_str(&manifest, "version").unwrap_or_else(|| "0.0.0".into()),
+        description: get_str(&manifest, "description"),
+        theme_colors: theme.as_ref().map(|t| t.colors.iter().map(|(k, hex)| (k.clone(), format!("#{hex}"))).collect()).unwrap_or_default(),
         import_from,
         named,
         has_theme: theme.is_some(),
@@ -196,10 +323,20 @@ fn is_safe_string(s: &str) -> bool {
 /// O componente em JSX com as props de um caso do catálogo (ds-scaffold.ts componentUsageOf): um
 /// elemento (slot) vira `{<Text>nome</Text>}` para o autor trocar.
 pub fn usage_of(component: &DsComponent) -> String {
+    usage_with(&component.name, component.props.as_deref())
+}
+
+/// O JSX de um componente com estas props (um caso do catálogo).
+pub fn usage_with(name: &str, props: Option<&Obj>) -> String {
     let mut attrs: Vec<String> = Vec::new();
-    if let Some(props) = &component.props {
+    // `children` vai entre as tags: um texto simples como está, o resto como um `<Text>…</Text>` para o autor trocar.
+    let children = props.and_then(|p| p.get("children")).filter(|v| !v.is_nullish()).map(|v| match v {
+        Value::Str(s) if is_safe_string(s) => s.to_string(),
+        _ => "<Text>…</Text>".to_string(),
+    });
+    if let Some(props) = props {
         for (name, value) in props.iter() {
-            if !is_identifier(name) {
+            if !is_identifier(name) || &**name == "children" {
                 continue;
             }
             let attr = match value {
@@ -216,7 +353,11 @@ pub fn usage_of(component: &DsComponent) -> String {
             attrs.push(attr);
         }
     }
-    if attrs.is_empty() { format!("<{} />", component.name) } else { format!("<{} {} />", component.name, attrs.join(" ")) }
+    let open = if attrs.is_empty() { format!("<{name}") } else { format!("<{name} {}", attrs.join(" ")) };
+    match children {
+        Some(body) => format!("{open}>{body}</{name}>"),
+        None => format!("{open} />"),
+    }
 }
 
 /// Nome do deck inicial que um DS pode trazer na própria raiz.
@@ -254,7 +395,16 @@ fn catalog_deck(ds: &DsInfo) -> String {
     let slides: Vec<String> = if shown.is_empty() {
         vec![format!("    <Slide {slide_props}>\n      <Text fontSize={{24}}>Nenhum componente do {} tem caso de catálogo.</Text>\n    </Slide>", ds.name)]
     } else {
-        shown.iter().map(|c| format!("    <Slide {slide_props}>\n      <Text fontSize={{24}} fontWeight=\"bold\">{}</Text>\n      {}\n    </Slide>", c.name, usage_of(c))).collect()
+        shown
+            .iter()
+            .map(|c| {
+                // Um template já é o slide inteiro: entra direto no Deck (ctx para os que medem o slide).
+                if c.slide {
+                    return format!("    {}", usage_of(c).replacen(&format!("<{}", c.name), &format!("<{} ctx={{ctx}}", c.name), 1));
+                }
+                format!("    <Slide {slide_props}>\n      <Text fontSize={{24}} fontWeight=\"bold\">{}</Text>\n      {}\n    </Slide>", c.name, usage_of(c))
+            })
+            .collect()
     };
     let mut out = vec![
         format!("// Deck criado por `pptsx-rs init --ds`: um slide por componente do {}, com as props do catálogo.", ds.name),
@@ -266,7 +416,7 @@ fn catalog_deck(ds: &DsInfo) -> String {
         out.push(format!("import {{ {} }} from '{}';", names.join(", "), ds.import_from));
     }
     out.push(String::new());
-    out.push("export default defineDeck(() => (".into());
+    out.push(if shown.iter().any(|c| c.slide) { "export default defineDeck((ctx) => (".into() } else { "export default defineDeck(() => (".into() });
     out.push("  <Deck>".into());
     out.push(slides.join("\n\n"));
     out.push("  </Deck>".into());
@@ -330,6 +480,30 @@ fn extends_line(schema: &Value) -> Option<String> {
 
 fn component_section(ds: &DsInfo, c: &DsComponent, props_table: &impl Fn(&Value) -> String) -> Vec<String> {
     let mut out = vec![format!("### {}", c.display_name.as_deref().unwrap_or(&c.name)), String::new()];
+    if let Some(d) = &c.description {
+        out.push(d.trim().to_string());
+        out.push(String::new());
+    }
+    if !c.audience.is_empty() {
+        out.push(format!("Público: {}.", c.audience.join(", ")));
+        out.push(String::new());
+    }
+    // Variações por público: o agente escolhe o caso que casa com a plateia do deck.
+    let variants: Vec<String> = c.cases.iter().filter(|k| !k.audience.is_empty()).map(|k| format!("- `{}` ({}): `{}`", k.name, k.audience.join(", "), usage_with(&c.name, Some(&k.props)))).collect();
+    if !variants.is_empty() {
+        out.push("Variações por público:".into());
+        out.extend(variants);
+        out.push(String::new());
+    }
+    // As listas de prompt (`whenToUse`/`avoid`) vêm antes do guia: são o que o agente decide primeiro.
+    for (title, items) in [("Use quando", &c.when_to_use), ("Evite", &c.avoid)] {
+        if items.is_empty() {
+            continue;
+        }
+        out.push(format!("{title}:"));
+        out.extend(items.iter().map(|item| format!("- {}", item.trim())));
+        out.push(String::new());
+    }
     if let Some(g) = &c.guide {
         out.push(g.trim().to_string());
         out.push(String::new());
@@ -361,6 +535,10 @@ fn component_section(ds: &DsInfo, c: &DsComponent, props_table: &impl Fn(&Value)
 /// DS, mesmo sem catálogo), as regras e o guia. `props_table` desenha a tabela de um componente.
 pub fn markdown(ds: &DsInfo, location: &DsLocation, props_table: impl Fn(&Value) -> String) -> String {
     let mut out = vec![format!("# {} {}", ds.name, ds.version), String::new()];
+    if let Some(d) = &ds.description {
+        out.push(d.trim().to_string());
+        out.push(String::new());
+    }
     let first: Vec<&str> = ds.components.iter().take(3).map(|c| c.name.as_str()).collect();
     out.push(format!(
         "Importe de `{}` (`import {{ {} }} from '{}';`) e registre o DS no `pptsx.config.ts` da pasta do deck ({}).",
@@ -374,8 +552,21 @@ pub fn markdown(ds: &DsInfo, location: &DsLocation, props_table: impl Fn(&Value)
     out.push(String::new());
     out.push("`*` = prop obrigatória. O tipo é o do TypeScript do DS; a nota traz a descrição, o padrão e exemplos do catálogo.".into());
     out.push(String::new());
-    for c in &ds.components {
-        out.extend(component_section(ds, c, &props_table));
+    // Por camada, do slide inteiro à peça menor: é a ordem em que o agente decide. Um DS só de
+    // componentes sai sem subtítulos, como antes do contrato.
+    let tiers: Vec<Tier> = Tier::ALL.into_iter().filter(|t| ds.components.iter().any(|c| c.kind == *t)).collect();
+    if !tiers.contains(&Tier::Template) && tiers.len() > 1 {
+        out.push("Este DS não traz templates de slide: monte cada slide com `<Slide>` e as estruturas abaixo.".into());
+        out.push(String::new());
+    }
+    for tier in &tiers {
+        if tiers.len() > 1 || *tier != Tier::Component {
+            out.push(format!("#### {} (`kind: \"{}\"`)", tier.title(), tier.name()));
+            out.push(String::new());
+        }
+        for c in ds.components.iter().filter(|c| c.kind == *tier) {
+            out.extend(component_section(ds, c, &props_table));
+        }
     }
     if !ds.rules.is_empty() {
         out.push("## Regras de lint".into());
@@ -409,6 +600,26 @@ mod tests {
         let deck_dir = base.join("a/b/../../out/novo");
         assert_eq!(relative_import(&deck_dir, &base.join("ds/src/index.ts")), "../../ds/src/index.ts");
         std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn usage_puts_children_between_the_tags() {
+        let mut props = Obj::new();
+        props.insert(Rc::from("title"), crate::js::value::str_val("Resultado"));
+        props.insert(Rc::from("children"), crate::js::value::str_val("corpo"));
+        assert_eq!(usage_with("Content", Some(&props)), "<Content title=\"Resultado\">corpo</Content>");
+        props.insert(Rc::from("children"), crate::js::value::arr_val(vec![]));
+        assert_eq!(usage_with("Content", Some(&props)), "<Content title=\"Resultado\"><Text>…</Text></Content>");
+        assert_eq!(usage_with("Divider", None), "<Divider />");
+    }
+
+    #[test]
+    fn tier_reads_kind_and_falls_back_to_slide() {
+        let parse = |s: &str| crate::js::parse_json(s).expect("json");
+        assert_eq!(Tier::of(&parse(r#"{ "kind": "chart" }"#)), Tier::Chart);
+        assert_eq!(Tier::of(&parse(r#"{ "slide": true }"#)), Tier::Template);
+        assert_eq!(Tier::of(&parse(r#"{ "kind": "outra" }"#)), Tier::Component);
+        assert_eq!(Tier::of(&parse(r#"{}"#)), Tier::Component);
     }
 
     #[test]

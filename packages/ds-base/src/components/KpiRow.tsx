@@ -36,10 +36,16 @@ export const KpiRow = defineComponent<KpiRowProps>(
   {
     name: 'KpiRow',
     ds: '@pptsx/ds-base',
+    kind: 'component',
+    category: 'Indicadores',
+    description: 'Linha de 2 a 4 KpiCards de larguras iguais, num grid de uma linha.',
+    audience: ['executive', 'strategic'],
+    whenToUse: ['Painel de resultado: os 3 ou 4 números do período.'],
+    avoid: ['Mais de 4 itens (regra ds-base/kpi-row-max-4).'],
     tags: ['kpi'],
     catalog: [
-      { name: '3-md', props: { items: SAMPLE.slice(0, 3) } },
-      { name: '4-sm', props: { items: SAMPLE, size: 'sm' } },
+      { name: '3-md', audience: ['executive'], props: { items: SAMPLE.slice(0, 3) } },
+      { name: '4-sm', audience: ['tactical'], props: { items: SAMPLE, size: 'sm' } },
     ],
   },
   KpiRowView,

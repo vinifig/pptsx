@@ -43,6 +43,12 @@ export const TwoColumn = defineComponent<TwoColumnProps>(
   {
     name: 'TwoColumn',
     ds: '@pptsx/ds-base',
+    kind: 'structure',
+    category: 'Grade',
+    description: 'Duas colunas (ou empilhadas em 4:3), com proporção ajustável: argumento de um lado, evidência do outro.',
+    audience: ['executive', 'strategic', 'tactical', 'operational'],
+    whenToUse: ['Texto + gráfico, antes/depois, problema/solução.'],
+    avoid: ['Três ou mais colunas: use um grid de Box.'],
     tags: ['layout'],
     catalog: [
       { name: 'lado-a-lado', fill: true, props: { left: <Text fontSize={20}>Texto à esquerda, com a lista ou o argumento.</Text>, right: <Box backgroundColor={tokens.color.surface} flex={1} /> } },

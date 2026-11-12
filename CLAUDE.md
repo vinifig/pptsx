@@ -34,6 +34,7 @@ Monorepo: `packages/pptsx-rs` (o motor, workspace Cargo na raiz) e, do legado em
 - `cargo build --release` — o binário (`target/release/pptsx-rs`); `cargo test` e `cargo clippy --release --all-targets -- -D warnings` na raiz
 - `target/release/pptsx-rs build <deck.tsx> --size 16x9,4x3 --out dist/` — `.pptx`, PNGs e diagnósticos; `check --json` só diagnostica
 - `target/release/pptsx-rs init <pasta> [--ds <caminho|pacote>]` e `types <pasta>` — pasta de deck e tipos do editor, sem npm
+- `target/release/pptsx-rs catalog` (DS do `pptsx.registry.json`; `registry add <ds>` registra) — o catálogo visual em `dist/catalog/index.html`; contrato em `docs/ds-catalog.md`
 - `target/release/pptsx-rs skill --ds <pasta do DS> --name <nome> --out <pasta>` — a skill autocontida (binário + DS)
 - `scripts/keynote-export.sh <arquivo.pptx> <pasta-saida>` — exporta slides via Keynote (validação visual real)
 - Legado em TS: `npm test` (vitest), `npm run typecheck` (tsc), `node packages/pptsx/bin/pptsx.mjs build …`, `node packages/ds-kit/bin/pptsx-ds.mjs catalog …`

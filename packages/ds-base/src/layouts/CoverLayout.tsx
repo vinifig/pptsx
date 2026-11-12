@@ -45,4 +45,15 @@ function CoverLayoutView({ title, subtitle, caption, ctx }: CoverLayoutProps) {
   );
 }
 
-export const CoverLayout = defineComponent<CoverLayoutProps>({ name: 'CoverLayout', ds: '@pptsx/ds-base', tags: ['layout'] }, CoverLayoutView);
+export const CoverLayout = defineComponent<CoverLayoutProps>({
+    name: 'CoverLayout',
+    ds: '@pptsx/ds-base',
+    kind: 'template',
+    category: 'Slides',
+    description: 'Capa: fundo da marca, título grande embaixo à esquerda e linha de contexto no topo.',
+    audience: ['executive', 'strategic', 'tactical', 'operational'],
+    whenToUse: ['Primeiro slide do deck (regra ds-base/cover-only-first).'],
+    avoid: ['No meio do deck: para separar partes, use ContentLayout com um título curto.'],
+    tags: ['layout'],
+    catalog: [{ name: 'capa', props: { caption: 'Relatório trimestral · Q3 2026', title: 'Resultado do trimestre', subtitle: 'Receita, custo e o que muda no Q4' } }],
+  }, CoverLayoutView);

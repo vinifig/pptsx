@@ -55,6 +55,12 @@ export const Bullets = defineComponent<BulletsProps>(
   {
     name: 'Bullets',
     ds: '@pptsx/ds-base',
+    kind: 'component',
+    category: 'Texto',
+    description: 'Lista de 3 a 6 tópicos com marcador da marca; encolhe ou pagina quando não cabe.',
+    audience: ['tactical', 'operational', 'strategic'],
+    whenToUse: ['Argumentos, achados ou próximos passos em frases curtas.'],
+    avoid: ['Mais de 6 itens num slide de diretoria: resuma ou use paginate.', 'Números que são o ponto do slide: use KpiCard/KpiRow.'],
     tags: ['lista'],
     catalog: [
       { name: 'padrão', props: { items: ['Receita recorrente cresceu 14% sobre o Q2.', 'Custo por consulta caiu 22% com o novo cache.', 'Três novas áreas passaram a usar o catálogo.'] } },

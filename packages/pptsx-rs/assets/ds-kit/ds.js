@@ -52,6 +52,7 @@ export const createDs = (input) => {
     const manifest = defineDs({
         name: input.name,
         version: input.version,
+        ...(input.description === undefined ? {} : { description: input.description }),
         components: metas.map((meta) => ({ ...meta, ds: meta.ds ?? input.name })),
         rules: input.rules ?? [],
         ...(input.theme === undefined ? {} : { theme: input.theme }),

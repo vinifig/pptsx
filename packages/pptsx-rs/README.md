@@ -126,6 +126,7 @@ O jeito principal de um agente usar o pptsx-rs é pelo **servidor MCP**: o agent
 | `build` | grava `.pptx` e PNGs e devolve os diagnósticos e o **overview em PNG** de cada tamanho | quando o deck está sem `error` |
 | `preview` | o PNG de um slide num tamanho | para conferir um slide que o diagnóstico apontou |
 | `lint` | regras da engine e as do design system da config | antes de entregar |
+| `catalog` | o índice dos componentes dos DS registrados, por camada (template, structure, chart, component, widget), com público, quando usar, o que evitar e o JSX de cada caso; filtra por `audience` e `kind` | antes de escrever um deck com um DS |
 
 `build`, `diagnose` e `lint` marcam `isError` quando o deck tem `error` (ou `warning`, no lint): a ferramenta funcionou, o deck é que precisa de correção. Cada diagnóstico diz o slide, o caminho do nó (`Slide > Box[1] > Text` é o `Text` do segundo `Box` do slide), o que aconteceu e o que fazer, e, num estouro, qual nó causou (`causedBy`).
 
@@ -204,6 +205,18 @@ export default defineConfig({ ds: [ds], theme: ds.theme });   // tema no arquivo
 ```
 
 Com isso o `lint` aplica as regras de marca do DS, o `guide` do MCP ganha a fonte do DS e o `schema` responde as props dos componentes dele. O servidor também aceita `pptsx-rs mcp --ds <caminho|pasta|pacote>` para um DS fora da config. Achados `off-theme-color` de nível info dentro de componentes do DS são do DS, não do deck: o `lint` os resume numa linha (o `--json` lista todos).
+
+### Catálogo visual e registro
+
+Cada componente declara no `defineComponent` a **camada** (`kind`: `template`, `structure`, `chart`, `component` ou `widget`), o **público** (`audience`: `executive`, `strategic`, `tactical`, `operational`, também por caso do catálogo), `description`, `whenToUse` e `avoid`. O `pptsx.registry.json` lista os DS do projeto, e `pptsx-rs catalog` renderiza cada caso de catálogo de cada DS com o motor de verdade e gera um visualizador num HTML só, o `catalog.json` (o contrato, `pptsx.catalog/1`), o `prompt.md` de cada DS e um `.pptx` por tamanho. O contrato completo está em [`docs/ds-catalog.md`](../../docs/ds-catalog.md).
+
+```bash
+pptsx-rs registry add packages/ds-base --id ds-base   # grava pptsx.registry.json (carrega o DS antes)
+pptsx-rs catalog                                      # dist/catalog/index.html, catalog.json, <id>/prompt.md e .pptx
+pptsx-rs catalog --json | --prompt                    # só o contrato ou só o prompt, sem construir nada
+```
+
+O servidor MCP também lê o registro: os DS dele viram fontes de `guide`, `schema` e `catalog` sem `--ds`.
 
 ### `@pptsx/ds-kit` vem no binário
 `pptsx-rs init <pasta> --ds @pptsx/ds-base` (ou um caminho, `--ds ../meu-ds/src/index.ts`) cria o deck com um slide por componente do DS, a config que o registra e o tsconfig; `pptsx-rs skill --ds …` gera a skill com `references/ds.md` (componentes, exemplos, props, regras e o guia do DS) e `references/pptsx.config.ts`, para o agente usar a marca sem procurar.
@@ -285,6 +298,10 @@ pptsx-rs types [pasta]                                          (re)grava os tip
 pptsx-rs skill [--out <pasta>] [--name <nome>] [--description <texto>] [--ds <caminho|pacote>]
                [--bin <binário> | --no-bin]                     a pasta da skill (SKILL.md, references/, mcp/, bin/);
                                                                 com --ds <caminho>, o DS vai junto em ds/
+pptsx-rs catalog [--ds <caminho|pacote>]... [--registry <arquivo>] [--out dist/catalog] [--size 16x9,4x3] [--json | --prompt]
+                                                                o catálogo visual dos DS registrados (index.html, catalog.json,
+                                                                prompt.md e .pptx por DS)
+pptsx-rs registry list | add <ds> [--id <id>] | remove <id>     o pptsx.registry.json: os DS que catalog e mcp enxergam
 pptsx-rs tree  <deck.tsx> [--size 16x9]                         a árvore avaliada
 pptsx-rs mcp   [--ds <caminho|pacote>]...                       servidor MCP por stdio
 ```
@@ -378,7 +395,8 @@ deck.tsx ─oxc_parser─► AST ─avaliador do subconjunto─► árvore de el
 | preview | `src/preview.rs` | SVG por slide (texto em contorno, gráficos, imagens) → PNG pelo `resvg` |
 | preview ao vivo | `src/serve.rs` | `--serve`: HTTP + SSE em `std::net`, a página do TS em `assets/preview.html`, estado gravado pelo build filho |
 | init | `src/init.rs`, `src/types.rs` | arquivos do projeto novo, mesclas de tsconfig/package/.gitignore; os `.d.ts` do pptsx e do kit em `.pptsx/types/` |
-| DS | `src/dsinfo.rs`, `src/dsprops.rs` | o manifesto de um DS lido pelo avaliador (`init --ds`, `skill --ds`, `mcp --ds`) e o schema das props lido das interfaces TS com o `oxc` |
+| DS | `src/dsinfo.rs`, `src/dsprops.rs` | o manifesto de um DS lido pelo avaliador (`init --ds`, `skill --ds`, `mcp --ds`, `catalog`), com as camadas (`kind`) e o público (`audience`) dos componentes e o schema das props lido das interfaces TS com o `oxc` |
+| catálogo | `src/catalog.rs`, `src/registry.rs`, `assets/catalog.html` | `pptsx-rs catalog`: o deck gerado com um slide por caso de catálogo, construído num processo filho, o `catalog.json` (pptsx.catalog/1), o `prompt.md` e o visualizador; o `pptsx.registry.json` e o comando `registry` |
 | skill | `src/skill.rs` | a pasta da skill: `SKILL.md`, referências geradas do guia e do schema, `mcp/*.json`, o binário e, com `--ds`, o DS empacotado e o conteúdo próprio dele |
 | lint | `src/lint.rs` | regras da engine e as dos DS (funções JS da config, chamadas pelo avaliador) |
 | MCP | `src/mcp.rs` | JSON-RPC por stdio; guia e schema embutidos no binário |
@@ -422,6 +440,6 @@ Concessão pragmática: `node:fs`, `node:path` e `node:url` existem **só para l
 
 - `lint --fix` e `lint --from 0.x` (o codemod da 0.x) não existem no binário: a troca é à mão, pela tabela do guia.
 - No MCP, `init` e o parâmetro `ds` do `lint` (os DS vêm da config ou do `--ds` do servidor).
-- O catálogo visual de um DS com fixtures de frames (`catalog --check` do kit em Node) não tem equivalente; `init --ds` gera um deck com um slide por caso de catálogo, que serve de vitrine.
+- O catálogo visual existe (`pptsx-rs catalog`), mas a comparação de frames contra fixtures (`catalog --check` do kit em Node) não tem equivalente.
 - O schema das props de um DS é lido do texto dos tipos, sem checagem: tipos mapeados ou utilitários (`Omit<…>`, `Partial<…>`) e tipos de outro pacote ficam como referência (`x-extends`), não são abertos.
 - O taffy ficou só como o tipo `Style` do modelo; trocá-lo por um `Style` próprio é limpeza, não comportamento.

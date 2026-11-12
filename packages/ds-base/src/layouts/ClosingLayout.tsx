@@ -35,4 +35,15 @@ function ClosingLayoutView({ title, subtitle, contact, ctx }: ClosingLayoutProps
   );
 }
 
-export const ClosingLayout = defineComponent<ClosingLayoutProps>({ name: 'ClosingLayout', ds: '@pptsx/ds-base', tags: ['layout'] }, ClosingLayoutView);
+export const ClosingLayout = defineComponent<ClosingLayoutProps>({
+    name: 'ClosingLayout',
+    ds: '@pptsx/ds-base',
+    kind: 'template',
+    category: 'Slides',
+    description: 'Encerramento: fundo da marca, mensagem centralizada e contato.',
+    audience: ['executive', 'strategic', 'tactical', 'operational'],
+    whenToUse: ['Último slide do deck: agradecimento, próximos passos ou contato.'],
+    avoid: ['Conclusões com dados: ponha num ContentLayout antes do encerramento.'],
+    tags: ['layout'],
+    catalog: [{ name: 'encerramento', props: { title: 'Obrigado', subtitle: 'Próximos passos no canal #resultados', contact: 'time-dados@empresa.com' } }],
+  }, ClosingLayoutView);
